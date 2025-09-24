@@ -1,0 +1,15 @@
+[Unit]
+Description=Gnome Headless Compositor
+After=multi-user.target
+Wants=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/bin/start_gnome.sh
+ExecStop=/bin/bash -c "killall -9 gnome-shell gnome-session-binary gnome-remote-desktop-daemon"
+KillMode=control-group
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
