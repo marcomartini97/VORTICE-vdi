@@ -10,18 +10,21 @@ RUN dnf -y update && \
 COPY vdi /etc/vdi
 
 # Create self signed keys and certificates if not available
-RUN if [ -d /etc/vdi ] && [ -z "$(ls -A /etc/vdi)" ]; then \
-        winpr-makecert -silent -path /etc/vdi -n VDI && \
-        CERT_FILE=$(find /etc/vdi -maxdepth 1 -type f -name '*.crt' -print -quit) && \
-        KEY_FILE=$(find /etc/vdi -maxdepth 1 -type f -name '*.key' -print -quit) && \
-        if [ -n "$CERT_FILE" ] && [ -n "$KEY_FILE" ]; then \
-            mv "$CERT_FILE" /etc/vdi/cert.pem && \
-            mv "$KEY_FILE" /etc/vdi/key.pem && \
-	    chown gnome-remote-desktop /etc/vdi/cert.pem && \
-	    chown gnome-remote-desktop /etc/vdi/key.pem;  \
-        else \
-            echo 'winpr-makecert did not produce expected certificate files.' >&2 && \
-            exit 1; \
+RUN if [ -d /etc/vdi ]; then \
+        if [ ! -f /etc/vdi/cert.pem ] || [ ! -f /etc/vdi/key.pem ]; then \
+            rm -f /etc/vdi/cert.pem /etc/vdi/key.pem && \
+            winpr-makecert -silent -path /etc/vdi -n VDI && \
+            CERT_FILE=$(find /etc/vdi -maxdepth 1 -type f -name '*.crt' -print -quit) && \
+            KEY_FILE=$(find /etc/vdi -maxdepth 1 -type f -name '*.key' -print -quit) && \
+            if [ -n "$CERT_FILE" ] && [ -n "$KEY_FILE" ]; then \
+                mv "$CERT_FILE" /etc/vdi/cert.pem && \
+                mv "$KEY_FILE" /etc/vdi/key.pem && \
+                chown gnome-remote-desktop /etc/vdi/cert.pem && \
+                chown gnome-remote-desktop /etc/vdi/key.pem; \
+            else \
+                echo 'winpr-makecert did not produce expected certificate files.' >&2 && \
+                exit 1; \
+            fi; \
         fi; \
     fi
 
