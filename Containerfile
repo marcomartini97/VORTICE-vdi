@@ -1,21 +1,55 @@
-FROM fedora:42
+FROM alpine:3.22.1
 
-RUN dnf -y update && \
-    dnf -y group install "gnome-desktop" && \
-    dnf -y install dbus-x11 freerdp && \
-    dnf clean all
+ENV LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8
 
-# Copy the keys present in the local folder "vdi" in /etc/
-# (La copia ricorsiva è implicita con "COPY vdi /etc/")
+RUN apk update && \
+    apk add --no-cache \
+        bash \
+        ca-certificates \
+        dbus \
+        dbus-x11 \
+        freerdp \
+        gdm \
+        gnome-session \
+        gnome-shell \
+        gnome-remote-desktop \
+	pipewire \
+	firefox \
+	fuse \
+	fuse3 \
+	polkit \
+	polkit-common \ 
+	gobject-introspection \
+        mesa-dri-gallium \
+	vulkan-loader \
+	mesa-demos \
+        openrc \
+        shadow \
+        sudo \
+        tzdata && \
+    rc-update add dbus default && \
+    rc-update add gdm default && \
+    sed -i 's/^#rc_sys=.*/rc_sys="docker"/' /etc/rc.conf && \
+    mkdir -p /run/openrc && \
+    touch /run/openrc/softlevel
+
+# More Gnome stuff
+
+RUN apk add $(apk info --quiet --depends gnome gnome-apps-core)
+
+RUN adduser -D -S -h /var/lib/gnome-remote-desktop gnome-remote-desktop || true
+RUN mkdir -p /var/lib/gnome-remote-desktop && \
+    chown gnome-remote-desktop /var/lib/gnome-remote-desktop
+
 COPY vdi /etc/vdi
 
-# Create self signed keys and certificates if not available
 RUN if [ -d /etc/vdi ]; then \
         if [ ! -f /etc/vdi/cert.pem ] || [ ! -f /etc/vdi/key.pem ]; then \
             rm -f /etc/vdi/cert.pem /etc/vdi/key.pem && \
-            winpr-makecert -silent -path /etc/vdi -n VDI && \
-            CERT_FILE=$(find /etc/vdi -maxdepth 1 -type f -name '*.crt' -print -quit) && \
-            KEY_FILE=$(find /etc/vdi -maxdepth 1 -type f -name '*.key' -print -quit) && \
+            winpr-makecert3 -silent -path /etc/vdi -n VDI && \
+            CERT_FILE=$(find /etc/vdi -maxdepth 1 -type f -name '*.crt' | head -n1) && \
+            KEY_FILE=$(find /etc/vdi -maxdepth 1 -type f -name '*.key' | head -n1) && \
             if [ -n "$CERT_FILE" ] && [ -n "$KEY_FILE" ]; then \
                 mv "$CERT_FILE" /etc/vdi/cert.pem && \
                 mv "$KEY_FILE" /etc/vdi/key.pem && \
@@ -28,21 +62,18 @@ RUN if [ -d /etc/vdi ]; then \
         fi; \
     fi
 
-# Copy the compositor start scripts start_gnome.sh setup_grd.sh in /usr/bin/
-COPY start_gnome.sh /usr/bin/
-COPY setup_grd.sh /usr/bin/
+COPY start_gnome.sh /usr/bin/start_gnome.sh
+COPY gnome-vdi-session.sh /usr/bin/gnome-vdi-session.sh
+COPY setup_grd.sh /usr/bin/setup_grd.sh
+RUN chmod +x /usr/bin/start_gnome.sh /usr/bin/gnome-vdi-session.sh /usr/bin/setup_grd.sh
 
-RUN chmod +x /usr/bin/start_gnome.sh /usr/bin/setup_grd.sh
+COPY gnome-vdi-session.initd /etc/init.d/gnome-vdi-session
+RUN chmod +x /etc/init.d/gnome-vdi-session && \
+    rc-update add gnome-vdi-session default
 
-# Copy and enable the systemD service
-COPY gnome-vdi-session.service /etc/systemd/system/gnome-vdi-session.service
-
-RUN systemctl enable gnome-vdi-session.service
-
-# Copy optional NVIDIA driver installers placed under drivers/
 COPY drivers/ /tmp/drivers/
 
-RUN DRIVER_PATH=$(find /tmp/drivers -maxdepth 1 -type f -name 'NVIDIA-Linux-x86_64*.run' -print -quit) && \
+RUN DRIVER_PATH=$(find /tmp/drivers -maxdepth 1 -type f -name 'NVIDIA-Linux-x86_64*.run' | head -n1) && \
     if [ -n "$DRIVER_PATH" ]; then \
         chmod +x "$DRIVER_PATH" && \
         "$DRIVER_PATH" --no-kernel-modules -s && \
@@ -51,4 +82,4 @@ RUN DRIVER_PATH=$(find /tmp/drivers -maxdepth 1 -type f -name 'NVIDIA-Linux-x86_
         echo "Skipping NVIDIA driver installation; installer not provided."; \
     fi
 
-CMD ["/usr/sbin/init"]
+CMD ["/sbin/init"]

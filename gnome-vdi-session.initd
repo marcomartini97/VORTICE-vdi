@@ -1,0 +1,22 @@
+#!/sbin/openrc-run
+
+description="GNOME headless compositor for VORTICE VDI"
+
+command="/usr/bin/gnome-vdi-session.sh"
+command_user="root"
+pidfile="/run/gnome-vdi-session.pid"
+command_background="yes"
+start_stop_daemon_args="--make-pidfile --pidfile ${pidfile}"
+
+depend() {
+    need dbus
+    after network
+}
+
+start_pre() {
+    mkdir -p /run
+}
+
+stop_post() {
+    pkill -9 gnome-shell gnome-session-binary gnome-remote-desktop-daemon 2>/dev/null || true
+}
