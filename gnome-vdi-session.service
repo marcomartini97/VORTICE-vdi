@@ -5,11 +5,16 @@ Wants=multi-user.target
 
 [Service]
 Type=simple
-ExecStart=/bin/start_gnome.sh
-ExecStop=/bin/bash -c "killall -9 gnome-shell gnome-session-binary gnome-remote-desktop-daemon"
+Environment=GNOME_VDI_LOG_DIR=/var/log/vortice
+ExecStartPre=/usr/bin/install -d -m 0755 /var/log/vortice
+ExecStart=/usr/bin/gnome-vdi-session.sh
+ExecStop=/usr/bin/kill -s TERM $MAINPID
 KillMode=control-group
 Restart=always
+RestartSec=5
+LogsDirectory=vortice
+StandardOutput=journal
+StandardError=inherit
 
 [Install]
 WantedBy=multi-user.target
-

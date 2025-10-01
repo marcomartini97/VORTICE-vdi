@@ -28,11 +28,11 @@ RUN if [ -d /etc/vdi ]; then \
         fi; \
     fi
 
-# Copy the compositor start scripts start_gnome.sh setup_grd.sh in /usr/bin/
-COPY start_gnome.sh /usr/bin/
+# Copy the compositor start scripts gnome-vdi-session.sh setup_grd.sh in /usr/bin/
+COPY gnome-vdi-session.sh /usr/bin/
 COPY setup_grd.sh /usr/bin/
 
-RUN chmod +x /usr/bin/start_gnome.sh /usr/bin/setup_grd.sh
+RUN chmod +x /usr/bin/gnome-vdi-session.sh /usr/bin/setup_grd.sh
 
 # Copy and enable the systemD service
 COPY gnome-vdi-session.service /etc/systemd/system/gnome-vdi-session.service
