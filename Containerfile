@@ -39,6 +39,9 @@ COPY gnome-vdi-session.service /etc/systemd/system/gnome-vdi-session.service
 
 RUN systemctl enable gnome-vdi-session.service
 
+# Disable gdm
+RUN systemctl disable gdm
+
 # Copy optional NVIDIA driver installers placed under drivers/
 COPY drivers/ /tmp/drivers/
 
